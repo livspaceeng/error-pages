@@ -44,6 +44,8 @@ func NewServer(log *zap.Logger) Server {
 			WriteTimeout:          defaultWriteTimeout,
 			ReadTimeout:           defaultReadTimeout,
 			IdleTimeout:           defaultIdleTimeout,
+			ReadBufferSize:        32000,
+			WriteBufferSize:       32000,
 			NoDefaultServerHeader: true,
 			ReduceMemoryUsage:     true,
 			CloseOnShutdown:       true,
