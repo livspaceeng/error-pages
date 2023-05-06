@@ -15,7 +15,7 @@ concurrency:
 jobs: # Docs: <https://git.io/JvxXE>
   gitleaks:
     name: Gitleaks
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
         with: {fetch-depth: 0}
@@ -25,20 +25,24 @@ jobs: # Docs: <https://git.io/JvxXE>
 
   golangci-lint:
     name: Golang-CI (lint)
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
-      - uses: golangci/golangci-lint-action@v3 # Action page: <https://github.com/golangci/golangci-lint-action>
+      - uses: gacts/setup-go-with-cache@v1
+        with: {go-version: 1.19}
+
+      - uses: golangci/golangci-lint-action@v3
+        with: {skip-pkg-cache: true, skip-build-cache: true}
 
   validate-config-file:
     name: Validate config file
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
-      - uses: actions/setup-node@v3
-        with: {node-version: '16'}
+      - uses: gacts/setup-node-with-cache@v1
+        with: {node-version: 16}
 
       - name: Install linter
         run: npm install -g ajv-cli # Package page: <https://www.npmjs.com/package/ajv-cli>
@@ -48,12 +52,12 @@ jobs: # Docs: <https://git.io/JvxXE>
 
   lint-l10n:
     name: Lint l10n file(s)
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
-      - uses: actions/setup-node@v3
-        with: {node-version: '16'}
+      - uses: gacts/setup-node-with-cache@v1
+        with: {node-version: 16}
 
       - name: Install eslint
         run: npm install -g eslint@v8 # Package page: <https://www.npmjs.com/package/eslint>
@@ -64,24 +68,13 @@ jobs: # Docs: <https://git.io/JvxXE>
 
   go-test:
     name: Unit tests
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-go@v3
-        with: {go-version: 1.19}
-
       - uses: actions/checkout@v3
         with: {fetch-depth: 2} # Fixes codecov error 'Issue detecting commit SHA'
 
-      - name: Go modules Cache # Docs: <https://git.io/JfAKn#go---modules>
-        uses: actions/cache@v3
-        id: go-cache
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: ${{ runner.os }}-go-
-
-      - if: steps.go-cache.outputs.cache-hit != 'true'
-        run: go mod download
+      - uses: gacts/setup-go-with-cache@v1
+        with: {go-version-file: go.mod}
 
       - name: Run Unit tests
         run: go test -race -covermode=atomic -coverprofile /tmp/coverage.txt ./...
@@ -94,7 +87,7 @@ jobs: # Docs: <https://git.io/JvxXE>
 
   build:
     name: Build for ${{ matrix.os }} (${{ matrix.arch }})
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
@@ -102,34 +95,24 @@ jobs: # Docs: <https://git.io/JvxXE>
         arch: [amd64]  # amd64, 386
     needs: [golangci-lint, go-test, validate-config-file]
     steps:
-      - uses: actions/setup-go@v3
-        with: {go-version: 1.19}
-
       - uses: actions/checkout@v3
 
-      - uses: gacts/github-slug@v1
-        id: slug
+      - uses: gacts/setup-go-with-cache@v1
+        with: {go-version-file: go.mod}
 
-      - name: Go modules Cache # Docs: <https://git.io/JfAKn#go---modules>
-        uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: ${{ runner.os }}-go-
-
-      - run: go mod download
+      - {uses: gacts/github-slug@v1, id: slug}
 
       - name: Build application
         env:
           GOOS: ${{ matrix.os }}
           GOARCH: ${{ matrix.arch }}
           CGO_ENABLED: 0
-          LDFLAGS: -s -w -X github.com/tarampampam/error-pages/internal/version.version=${{ steps.slug.outputs.branch-name-slug }}@${{ steps.slug.outputs.commit-hash-short }}
+          LDFLAGS: -s -w -X gh.tarampamp.am/error-pages/internal/version.version=${{ steps.slug.outputs.branch-name-slug }}@${{ steps.slug.outputs.commit-hash-short }}
         run: go build -trimpath -ldflags "$LDFLAGS" -o ./error-pages ./cmd/error-pages/
 
       - name: Try to execute
         if: matrix.os == 'linux'
-        run: ./error-pages version && ./error-pages -h
+        run: ./error-pages --version && ./error-pages -h
 
       - uses: actions/upload-artifact@v3
         with:
@@ -140,7 +123,7 @@ jobs: # Docs: <https://git.io/JvxXE>
 
   generate:
     name: Run templates generator
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     needs: [build]
     steps:
       - uses: actions/checkout@v3
@@ -155,7 +138,7 @@ jobs: # Docs: <https://git.io/JvxXE>
         run: mv ./error-pages ./../error-pages && chmod +x ./../error-pages
 
       - name: Run generator
-        run: ./error-pages build ./out --verbose --index
+        run: ./error-pages --verbose build --index ./out
 
       - name: Test files creation
         run: |
@@ -171,18 +154,18 @@ jobs: # Docs: <https://git.io/JvxXE>
           test -f ./out/app-down/404.html
           test -f ./out/connection/404.html
           test -f ./out/matrix/404.html
+          test -f ./out/orient/404.html
 
   docker-image:
     name: Build docker image
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     needs: [golangci-lint, go-test, validate-config-file]
     steps:
       - uses: actions/checkout@v3
 
-      - uses: gacts/github-slug@v1
-        id: slug
+      - {uses: gacts/github-slug@v1, id: slug}
 
-      - uses: docker/build-push-action@v3 # Action page: <https://github.com/docker/build-push-action>
+      - uses: docker/build-push-action@v4 # Action page: <https://github.com/docker/build-push-action>
         with:
           context: .
           file: Dockerfile
@@ -200,7 +183,7 @@ jobs: # Docs: <https://git.io/JvxXE>
 
   scan-docker-image:
     name: Scan the docker image
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     needs: [docker-image]
     steps:
       - uses: actions/checkout@v3 # is needed for `upload-sarif` action
@@ -210,7 +193,7 @@ jobs: # Docs: <https://git.io/JvxXE>
           name: docker-image
           path: .artifact
 
-      - uses: aquasecurity/trivy-action@0.8.0 # action page: <https://github.com/aquasecurity/trivy-action>
+      - uses: aquasecurity/trivy-action@0.10.0 # action page: <https://github.com/aquasecurity/trivy-action>
         with:
           input: .artifact/docker-image.tar
           format: sarif
@@ -225,7 +208,7 @@ jobs: # Docs: <https://git.io/JvxXE>
 
   poke-docker-image:
     name: Run the docker image
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     needs: [docker-image]
     timeout-minutes: 2
     steps:

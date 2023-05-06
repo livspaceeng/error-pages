@@ -4,6 +4,54 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog][keepachangelog] and this project adheres to [Semantic Versioning][semver].
 
+## v2.24.0
+
+### Added
+
+- Support for IPv6 addresses in the `--listen` flag [#191]
+
+[#191]:https://github.com/tarampampam/error-pages/issues/191
+
+## v2.23.0
+
+### Added
+
+- Template `orient` [#190]
+
+[#190]:https://github.com/tarampampam/error-pages/pull/190
+
+## v2.22.0
+
+### Changed
+
+- Non-existing pages now return styled `404` status page (with `404` status code) [#188]
+
+[#188]:https://github.com/tarampampam/error-pages/issues/188
+
+## v2.21.0
+
+### Changed
+
+- Go updated from `1.19` up to `1.20`
+- Go dependencies updated
+- Module name changed from `github.com/tarampampam/error-pages` to `gh.tarampamp.am/error-pages`
+
+## v2.20.0
+
+### Changed
+
+- `version` subcommand replaced by `--version` flag [#163]
+- `--config-file` flag is not global anymore (use `error-pages (serve|build) --config-file ...` instead of `error-pages --config-file ... (serve|build) ...`) [#163]
+- Flags `--verbose`, `--debug` and `--log-json` are deprecated, use `--log-level` and `--log-format` instead [#163]
+
+### Added
+
+- Possibility to use custom env variables in templates [#164], [#165]
+
+[#164]:https://github.com/tarampampam/error-pages/issues/164
+[#165]:https://github.com/tarampampam/error-pages/pull/165
+[#163]:https://github.com/tarampampam/error-pages/pull/163
+
 ## v2.19.0
 
 ### Changed

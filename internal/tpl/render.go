@@ -10,7 +10,8 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/tarampampam/error-pages/internal/version"
+
+	"gh.tarampamp.am/error-pages/internal/version"
 )
 
 // These functions are always allowed in the templates.
@@ -30,6 +31,7 @@ var tplFnMap = template.FuncMap{ //nolint:gochecknoglobals
 
 		return 0
 	},
+	"env": os.Getenv,
 }
 
 var ErrClosed = errors.New("closed")

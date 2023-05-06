@@ -5,8 +5,13 @@ import (
 	"path/filepath"
 
 	"github.com/fatih/color"
-	"github.com/tarampampam/error-pages/internal/cli"
+	"go.uber.org/automaxprocs/maxprocs"
+
+	"gh.tarampamp.am/error-pages/internal/cli"
 )
+
+// set GOMAXPROCS to match Linux container CPU quota.
+var _, _ = maxprocs.Set(maxprocs.Min(1), maxprocs.Logger(func(_ string, _ ...any) {}))
 
 // exitFn is a function for application exiting.
 var exitFn = os.Exit //nolint:gochecknoglobals
@@ -17,9 +22,7 @@ func main() { exitFn(run()) }
 // run this CLI application.
 // Exit codes documentation: <https://tldp.org/LDP/abs/html/exitcodes.html>
 func run() int {
-	cmd := cli.NewCommand(filepath.Base(os.Args[0]))
-
-	if err := cmd.Execute(); err != nil {
+	if err := (cli.NewApp(filepath.Base(os.Args[0]))).Run(os.Args); err != nil {
 		_, _ = color.New(color.FgHiRed, color.Bold).Fprintln(os.Stderr, err.Error())
 
 		return 1

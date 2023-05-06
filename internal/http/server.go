@@ -1,25 +1,29 @@
 package http
 
 import (
-	"strconv"
+	"errors"
+	"fmt"
+	"net"
+	"strings"
 	"time"
 
 	"github.com/fasthttp/router"
-	"github.com/tarampampam/error-pages/internal/checkers"
-	"github.com/tarampampam/error-pages/internal/config"
-	"github.com/tarampampam/error-pages/internal/http/common"
-	errorpageHandler "github.com/tarampampam/error-pages/internal/http/handlers/errorpage"
-	healthzHandler "github.com/tarampampam/error-pages/internal/http/handlers/healthz"
-	indexHandler "github.com/tarampampam/error-pages/internal/http/handlers/index"
-	metricsHandler "github.com/tarampampam/error-pages/internal/http/handlers/metrics"
-	notfoundHandler "github.com/tarampampam/error-pages/internal/http/handlers/notfound"
-	versionHandler "github.com/tarampampam/error-pages/internal/http/handlers/version"
-	"github.com/tarampampam/error-pages/internal/metrics"
-	"github.com/tarampampam/error-pages/internal/options"
-	"github.com/tarampampam/error-pages/internal/tpl"
-	"github.com/tarampampam/error-pages/internal/version"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
+
+	"gh.tarampamp.am/error-pages/internal/checkers"
+	"gh.tarampamp.am/error-pages/internal/config"
+	"gh.tarampamp.am/error-pages/internal/http/common"
+	errorpageHandler "gh.tarampamp.am/error-pages/internal/http/handlers/errorpage"
+	healthzHandler "gh.tarampamp.am/error-pages/internal/http/handlers/healthz"
+	indexHandler "gh.tarampamp.am/error-pages/internal/http/handlers/index"
+	metricsHandler "gh.tarampamp.am/error-pages/internal/http/handlers/metrics"
+	notfoundHandler "gh.tarampamp.am/error-pages/internal/http/handlers/notfound"
+	versionHandler "gh.tarampamp.am/error-pages/internal/http/handlers/version"
+	"gh.tarampamp.am/error-pages/internal/metrics"
+	"gh.tarampamp.am/error-pages/internal/options"
+	"gh.tarampamp.am/error-pages/internal/tpl"
+	"gh.tarampamp.am/error-pages/internal/version"
 )
 
 type Server struct {
@@ -58,8 +62,24 @@ func NewServer(log *zap.Logger) Server {
 }
 
 // Start server.
-func (s *Server) Start(ip string, port uint16) error {
-	return s.fast.ListenAndServe(ip + ":" + strconv.Itoa(int(port)))
+func (s *Server) Start(ip string, port uint16) (err error) {
+	if net.ParseIP(ip) == nil {
+		return errors.New("invalid IP address")
+	}
+
+	var ln net.Listener
+
+	if strings.Count(ip, ":") >= 2 { //nolint:gomnd // ipv6
+		if ln, err = net.Listen("tcp6", fmt.Sprintf("[%s]:%d", ip, port)); err != nil {
+			return err
+		}
+	} else { // ipv4
+		if ln, err = net.Listen("tcp4", fmt.Sprintf("%s:%d", ip, port)); err != nil {
+			return err
+		}
+	}
+
+	return s.fast.Serve(ln)
 }
 
 type templatePicker interface {
@@ -89,7 +109,7 @@ func (s *Server) Register(cfg *config.Config, templatePicker templatePicker, opt
 
 	s.router.GET("/metrics", metricsHandler.NewHandler(reg))
 
-	s.router.NotFound = notfoundHandler.NewHandler()
+	s.router.NotFound = notfoundHandler.NewHandler(cfg, templatePicker, s.rdr, opt)
 
 	return nil
 }

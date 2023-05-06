@@ -12,7 +12,10 @@
   <a href="https://github.com/tarampampam/error-pages/blob/master/LICENSE"><img src="https://img.shields.io/github/license/tarampampam/error-pages.svg?maxAge=30&style=flat-square" alt="" /></a>
 </p>
 
-<p align="center"><sup>22 feb. 2022 - ⚡ Our Docker image was downloaded <strong>one MILLION times</strong> from the docker hub! ⚡</sup></p>
+<p align="center"><sup>
+  22 feb. 2022 - ⚡ Our Docker image was downloaded <strong>one MILLION times</strong> from the docker hub! ⚡<br/>
+  10 apr. 2023 - ⚡ <strong>Two million times</strong> from the docker hub and <strong>one million</strong> from the ghcr! ⚡
+</sup></p>
 
 One day you may want to replace the standard error pages of your HTTP server with something more original and pretty. That's what this repository was created for :) It contains:
 
@@ -123,6 +126,7 @@ Transfer/sec:    140.23MB
 |    `app-down`     |           [![app-down][app-down-screen]][app-down-link]            |
 |   `connection`    |        [![connection][connection-screen]][connection-link]         |
 |     `matrix`      |              [![matrix][matrix-screen]][matrix-link]               |
+|     `orient`      |              [![orient][orient-screen]][orient-link]               |
 
 > Note: `noise` template highly uses the CPU, be careful
 
@@ -148,6 +152,8 @@ Transfer/sec:    140.23MB
 [connection-link]:https://tarampampam.github.io/error-pages/connection/404.html
 [matrix-screen]:https://hsto.org/webt/ng/tf/oi/ngtfoiolvmq6hf15kimcxmhprhk.gif
 [matrix-link]:https://tarampampam.github.io/error-pages/matrix/404.html
+[orient-screen]:https://hsto.org/webt/pz/eu/v_/pzeuv_lyeqr0xpusa4zfrtgk7sa.png
+[orient-link]:https://tarampampam.github.io/error-pages/orient/404.html
 
 ## 🦾 Contributors
 
