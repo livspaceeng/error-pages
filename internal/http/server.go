@@ -39,13 +39,14 @@ const (
 	defaultIdleTimeout  = time.Second * 6
 )
 
-func NewServer(log *zap.Logger) Server {
+func NewServer(log *zap.Logger, readBufferSize uint) Server {
 	rdr := tpl.NewTemplateRenderer()
 
 	return Server{
 		// fasthttp docs: <https://github.com/valyala/fasthttp>
 		fast: &fasthttp.Server{
 			WriteTimeout:          defaultWriteTimeout,
+			ReadBufferSize:        int(readBufferSize),
 			ReadTimeout:           defaultReadTimeout,
 			IdleTimeout:           defaultIdleTimeout,
 			ReadBufferSize:        32000,
@@ -109,7 +110,13 @@ func (s *Server) Register(cfg *config.Config, templatePicker templatePicker, opt
 
 	s.router.GET("/metrics", metricsHandler.NewHandler(reg))
 
-	s.router.NotFound = notfoundHandler.NewHandler(cfg, templatePicker, s.rdr, opt)
+	// use index handler to catch all paths? Uses DEFAULT_ERROR_PAGE
+	if opt.CatchAll {
+		s.router.NotFound = indexHandler.NewHandler(cfg, templatePicker, s.rdr, opt)
+	} else {
+		// use default not found handler
+		s.router.NotFound = notfoundHandler.NewHandler(cfg, templatePicker, s.rdr, opt)
+	}
 
 	return nil
 }

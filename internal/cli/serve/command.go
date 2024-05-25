@@ -32,6 +32,8 @@ const (
 	showDetailsFlagName      = "show-details"
 	proxyHTTPHeadersFlagName = "proxy-headers"
 	disableL10nFlagName      = "disable-l10n"
+	catchAllFlagName         = "catch-all"
+	readBufferSizeFlagName   = "read-buffer-size"
 )
 
 const (
@@ -76,6 +78,7 @@ func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 				o.Default.PageCode = c.String(defaultErrorPageFlagName)
 				o.Default.HTTPCode = uint16(c.Uint(defaultHTTPCodeFlagName))
 				o.ShowDetails = c.Bool(showDetailsFlagName)
+				o.CatchAll = c.Bool(catchAllFlagName)
 
 				if headers := c.String(proxyHTTPHeadersFlagName); headers != "" { //nolint:nestif
 					var m = make(map[string]struct{})
@@ -105,7 +108,7 @@ func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 				return fmt.Errorf("wrong default HTTP response code [%d]", o.Default.HTTPCode)
 			}
 
-			return cmd.Run(c.Context, log, cfg, ip, port, o)
+			return cmd.Run(c.Context, log, cfg, ip, port, c.Uint(readBufferSizeFlagName), o)
 		},
 		Flags: []cli.Flag{
 			shared.ConfigFileFlag,
@@ -151,6 +154,16 @@ func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 				Usage:   "disable error pages localization",
 				EnvVars: []string{env.DisableL10n.String()},
 			},
+			&cli.BoolFlag{
+				Name:    catchAllFlagName,
+				Usage:   "catch all pages",
+				EnvVars: []string{env.CatchAll.String()},
+			},
+			&cli.UintFlag{
+				Name:    readBufferSizeFlagName,
+				Usage:   "read buffer size (0 = use default value)",
+				EnvVars: []string{env.ReadBufferSize.String()},
+			},
 		},
 	}
 
@@ -159,7 +172,13 @@ func NewCommand(log *zap.Logger) *cli.Command { //nolint:funlen
 
 // Run current command.
 func (cmd *command) Run( //nolint:funlen
-	parentCtx context.Context, log *zap.Logger, cfg *config.Config, ip string, port uint16, opt options.ErrorPage,
+	parentCtx context.Context,
+	log *zap.Logger,
+	cfg *config.Config,
+	ip string,
+	port uint16,
+	readBufferSize uint,
+	opt options.ErrorPage,
 ) error {
 	var (
 		ctx, cancel = context.WithCancel(parentCtx) // serve context creation
@@ -219,7 +238,7 @@ func (cmd *command) Run( //nolint:funlen
 	}
 
 	// create HTTP server
-	server := appHttp.NewServer(log)
+	server := appHttp.NewServer(log, readBufferSize)
 
 	// register server routes, middlewares, etc.
 	if err := server.Register(cfg, picker, opt); err != nil {
@@ -232,7 +251,7 @@ func (cmd *command) Run( //nolint:funlen
 	go func(errCh chan<- error) {
 		defer close(errCh)
 
-		log.Info("Server starting",
+		var fields = []zap.Field{
 			zap.String("addr", ip),
 			zap.Uint16("port", port),
 			zap.String("default error page", opt.Default.PageCode),
@@ -240,7 +259,14 @@ func (cmd *command) Run( //nolint:funlen
 			zap.Strings("proxy headers", opt.ProxyHTTPHeaders),
 			zap.Bool("show request details", opt.ShowDetails),
 			zap.Bool("localization disabled", opt.L10n.Disabled),
-		)
+			zap.Bool("catch all enabled", opt.CatchAll),
+		}
+
+		if readBufferSize > 0 {
+			fields = append(fields, zap.Uint("read buffer size", readBufferSize))
+		}
+
+		log.Info("Server starting", fields...)
 
 		if err := server.Start(ip, port); err != nil {
 			errCh <- err

@@ -5,18 +5,18 @@ version: 2
 updates:
   - package-ecosystem: gomod
     directory: /
+    groups: {gomod: {patterns: ['*']}}
     schedule: {interval: monthly}
-    reviewers: [tarampampam]
     assignees: [tarampampam]
 
   - package-ecosystem: github-actions
     directory: /
+    groups: {github-actions: {patterns: ['*']}}
     schedule: {interval: monthly}
-    reviewers: [tarampampam]
     assignees: [tarampampam]
 
   - package-ecosystem: docker
     directory: /
+    groups: {docker: {patterns: ['*']}}
     schedule: {interval: monthly}
-    reviewers: [tarampampam]
     assignees: [tarampampam]

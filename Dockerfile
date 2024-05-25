@@ -1,7 +1,17 @@
-# syntax=docker/dockerfile:1.2
+# syntax=docker/dockerfile:1
 
-# Image page: <https://hub.docker.com/_/golang>
-FROM golang:1.20-alpine as builder
+# this stage is used to build the application
+FROM docker.io/library/golang:1.22-bookworm AS builder
+
+COPY ./go.* /src/
+
+WORKDIR /src
+
+# burn the modules cache
+RUN go mod download
+
+# this stage is used to compile the application
+FROM builder AS compiler
 
 # can be passed with any prefix (like `v1.2.3@GITHASH`), e.g.: `docker build --build-arg "APP_VERSION=v1.2.3@GITHASH" .`
 ARG APP_VERSION="undefined@docker"
@@ -13,8 +23,8 @@ COPY . .
 # arguments to pass on each go tool link invocation
 ENV LDFLAGS="-s -w -X gh.tarampamp.am/error-pages/internal/version.version=$APP_VERSION"
 
+# build the application
 RUN set -x \
-    && go version \
     && CGO_ENABLED=0 go build -trimpath -ldflags "$LDFLAGS" -o ./error-pages ./cmd/error-pages/ \
     && ./error-pages --version \
     && ./error-pages -h
@@ -42,7 +52,7 @@ RUN set -x \
     && ls -l ./html
 
 # use empty filesystem
-FROM scratch as runtime
+FROM scratch AS runtime
 
 ARG APP_VERSION="undefined@docker"
 
@@ -57,7 +67,7 @@ LABEL \
     org.opencontainers.image.licenses="MIT"
 
 # Import from builder
-COPY --from=builder /tmp/rootfs /
+COPY --from=compiler /tmp/rootfs /
 
 # Use an unprivileged user
 USER 10001:10001
@@ -69,7 +79,8 @@ ENV LISTEN_PORT="8080" \
     DEFAULT_ERROR_PAGE="404" \
     DEFAULT_HTTP_CODE="404" \
     SHOW_DETAILS="false" \
-    DISABLE_L10N="false"
+    DISABLE_L10N="false" \
+    READ_BUFFER_SIZE="2048"
 
 # Docs: <https://docs.docker.com/engine/reference/builder/#healthcheck>
 HEALTHCHECK --interval=7s --timeout=2s CMD ["/bin/error-pages", "--log-json", "healthcheck"]

@@ -4,6 +4,35 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog][keepachangelog] and this project adheres to [Semantic Versioning][semver].
 
+## v2.27.0
+
+### Changed
+
+- Go updated from `1.21` up to `1.22`
+- Go dependencies updated
+
+## v2.26.0
+
+### Added
+
+- Error pages now translated into 🇵🇱 [#226]
+- Possibility to set custom read buffer size (using `--read-buffer-size` flag or environment variable `READ_BUFFER_SIZE`) [#238], [#244]
+
+[#226]:https://github.com/tarampampam/error-pages/pull/226
+[#238]:https://github.com/tarampampam/error-pages/issues/238
+[#244]:https://github.com/tarampampam/error-pages/pull/244
+
+## v2.25.0
+
+### Added
+
+- Go updated from `1.20` up to `1.21`
+- Error pages now translated into 🇮🇩 [#218]
+- Possibility catch all paths with error page 404 (using `--catch-all` flag for the `serve` or environment variable `CATCH_ALL=true`) [#217]
+
+[#218]:https://github.com/tarampampam/error-pages/pull/218
+[#217]:https://github.com/tarampampam/error-pages/issues/217
+
 ## v2.24.0
 
 ### Added
